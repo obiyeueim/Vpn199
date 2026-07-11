@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+# Lightweight bootstrap script included because binary gradle-wrapper.jar cannot be embedded here.
+# It downloads Gradle 8.13 from the official distribution server, caches it, then runs Gradle.
+set -eu
+GRADLE_VERSION=8.13
+CACHE_DIR="${HOME}/.gradle/pingpilot-bootstrap"
+ZIP_FILE="$CACHE_DIR/gradle-${GRADLE_VERSION}-bin.zip"
+GRADLE_HOME="$CACHE_DIR/gradle-${GRADLE_VERSION}"
+mkdir -p "$CACHE_DIR"
+if [ ! -x "$GRADLE_HOME/bin/gradle" ]; then
+  if [ ! -f "$ZIP_FILE" ]; then
+    echo "Downloading Gradle ${GRADLE_VERSION}..."
+    if command -v curl >/dev/null 2>&1; then
+      curl -fL "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o "$ZIP_FILE"
+    elif command -v wget >/dev/null 2>&1; then
+      wget -O "$ZIP_FILE" "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"
+    else
+      echo "curl or wget is required." >&2
+      exit 1
+    fi
+  fi
+  rm -rf "$GRADLE_HOME"
+  unzip -q "$ZIP_FILE" -d "$CACHE_DIR"
+fi
+exec "$GRADLE_HOME/bin/gradle" "$@"

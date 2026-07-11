@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Ping Pilot VPN</string>
+    <string name="vpn_channel_name">VPN connection</string>
+    <string name="vpn_channel_description">Shows the active local VPN demonstration service</string>
+    <string name="vpn_notification_title">Ping Pilot VPN is active</string>
+    <string name="vpn_notification_text">Local demo tunnel is running</string>
+    <string name="vpn_disconnect">Disconnect</string>
+</resources>
