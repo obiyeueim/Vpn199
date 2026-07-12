@@ -15,18 +15,24 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(FetchContent)
 
-# Dobby is pinned to a known commit so QA builds are reproducible.
+# This maintained Dobby fork avoids the Apple-only ARM64 assembly path that
+# fails with modern Android NDK toolchains. The revision is pinned so CI and
+# Android Studio resolve exactly the same native dependency.
+set(DOBBY_GENERATE_SHARED ON CACHE BOOL "" FORCE)
 set(DOBBY_DEBUG OFF CACHE BOOL "" FORCE)
-set(DOBBY_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
-set(DOBBY_BUILD_TEST OFF CACHE BOOL "" FORCE)
+set(DynamicBinaryInstrument OFF CACHE BOOL "" FORCE)
+set(NearBranch ON CACHE BOOL "" FORCE)
+set(FullFloatingPointRegisterPack OFF CACHE BOOL "" FORCE)
 set(Plugin.SymbolResolver ON CACHE BOOL "" FORCE)
-set(Plugin.ImportTableReplace OFF CACHE BOOL "" FORCE)
-set(Plugin.Android.BionicLinkerUtil OFF CACHE BOOL "" FORCE)
+set(Plugin.GlobalOffsetTableHook OFF CACHE BOOL "" FORCE)
+set(Plugin.LinkerLoadCallback OFF CACHE BOOL "" FORCE)
+set(Plugin.ApplicationEventMonitor OFF CACHE BOOL "" FORCE)
+set(Plugin.Android.BionicLinkerRestriction OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
         dobby_source
-        GIT_REPOSITORY https://github.com/jmpews/Dobby.git
-        GIT_TAG 5dfc8546954ce3b3198132ab13fddb89ee92cdd7
+        GIT_REPOSITORY https://github.com/BepInEx/Dobby.git
+        GIT_TAG 9d271803881f467aabfc24593c7dcaeb710fe861
         GIT_PROGRESS TRUE
 )
 
