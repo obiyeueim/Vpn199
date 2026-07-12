@@ -40,15 +40,35 @@ jobs:
           gradle-version: "8.13"
 
       - name: Build debug APK
-        run: gradle --no-daemon :app:assembleDebug
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleDebug --stacktrace 2>&1 | tee build.log
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PingPilotVPN-build-log
+          path: PingPilotVPN/build.log
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Run unit tests
+        if: steps.build.outcome == 'success'
         run: gradle --no-daemon :app:testDebugUnitTest
 
       - name: Upload APK
+        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: PingPilotVPN-debug-apk
           path: PingPilotVPN/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Mark build as failed
+        if: steps.build.outcome == 'failure'
+        run: exit 1
