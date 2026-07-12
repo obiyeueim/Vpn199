@@ -141,8 +141,8 @@ bool InstallSendToHook() {
     __android_log_print(
             ANDROID_LOG_INFO,
             kLogTag,
-            "Process-local sendto hook installed with Dobby %s",
-            DobbyGetVersion()
+            "Process-local sendto hook installed with %s",
+            DobbyBuildVersion()
     );
 
     return true;
@@ -189,7 +189,7 @@ jboolean NativeIsHookInstalled(JNIEnv *, jclass) {
     return gHookInstalled.load(std::memory_order_acquire) ? JNI_TRUE : JNI_FALSE;
 }
 
-constexpr JNINativeMethod kNativeMethods[] = {
+const JNINativeMethod kNativeMethods[] = {
         {
                 const_cast<char *>("installHooks"),
                 const_cast<char *>("()Z"),
