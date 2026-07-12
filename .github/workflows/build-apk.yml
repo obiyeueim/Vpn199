@@ -18,7 +18,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     defaults:
       run:
@@ -33,6 +33,15 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK and CMake
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install "ndk;27.3.13750724" "cmake;3.22.1"
 
       - name: Set up Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
