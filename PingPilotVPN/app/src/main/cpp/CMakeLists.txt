@@ -21,7 +21,7 @@ include(FetchContent)
 # Android Studio resolve exactly the same native dependency.
 set(DOBBY_GENERATE_SHARED ON CACHE BOOL "" FORCE)
 set(DOBBY_DEBUG OFF CACHE BOOL "" FORCE)
-set(DynamicBinaryInstrument OFF CACHE BOOL "" FORCE)
+set(DynamicBinaryInstrument ON CACHE BOOL "" FORCE)
 set(NearBranch ON CACHE BOOL "" FORCE)
 set(FullFloatingPointRegisterPack OFF CACHE BOOL "" FORCE)
 set(Plugin.SymbolResolver ON CACHE BOOL "" FORCE)
