@@ -1,0 +1,3 @@
+Build trigger for the latest split-tunneling APK.
+Source branch: main
+Purpose: produce a downloadable QA artifact.
