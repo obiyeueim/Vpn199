@@ -14,6 +14,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Switch;
@@ -25,10 +26,10 @@ import com.khanhan.pingpilot.MainActivity;
 import com.khanhan.pingpilot.R;
 
 /**
- * Floating debug panel for internal QA builds.
+ * Floating debug controls for internal QA builds.
  *
- * <p>The native emulation is process-local. It only affects UDP sendto calls
- * made by this APK process after the Dobby hook is installed.</p>
+ * <p>The native module remains process-local and only affects UDP sendto calls
+ * made by this APK process.</p>
  */
 public final class FloatingQaOverlayService extends Service {
 
@@ -99,11 +100,14 @@ public final class FloatingQaOverlayService extends Service {
         layoutParams.x = 24;
         layoutParams.y = 180;
 
+        final View bubble = overlayView.findViewById(R.id.qa_bubble);
+        final View panel = overlayView.findViewById(R.id.qa_panel);
+        final View collapseButton = overlayView.findViewById(R.id.button_collapse_overlay);
+        final View dragHandle = overlayView.findViewById(R.id.qa_drag_handle);
         final TextView statusText = overlayView.findViewById(R.id.qa_status);
         final Switch latencySwitch = overlayView.findViewById(R.id.switch_latency);
         final Switch packetDropSwitch = overlayView.findViewById(R.id.switch_packet_drop);
         final Button closeButton = overlayView.findViewById(R.id.button_close_overlay);
-        final View dragHandle = overlayView.findViewById(R.id.qa_drag_handle);
 
         nativeLibraryReady = initializeNativeModule(statusText);
         latencySwitch.setEnabled(nativeLibraryReady);
@@ -141,6 +145,13 @@ public final class FloatingQaOverlayService extends Service {
         });
 
         closeButton.setOnClickListener(view -> stopSelf());
+        collapseButton.setOnClickListener(view -> {
+            panel.setVisibility(View.GONE);
+            bubble.setVisibility(View.VISIBLE);
+            refreshOverlayLayout(layoutParams);
+        });
+
+        installBubbleTouchHandler(bubble, panel, layoutParams);
         installDragHandler(dragHandle, layoutParams);
 
         try {
@@ -192,6 +203,64 @@ public final class FloatingQaOverlayService extends Service {
         statusText.setText("Native error: " + throwable.getClass().getSimpleName());
     }
 
+    private void installBubbleTouchHandler(
+            View bubble,
+            View panel,
+            WindowManager.LayoutParams layoutParams
+    ) {
+        final int touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
+
+        bubble.setOnTouchListener(new View.OnTouchListener() {
+            private int initialX;
+            private int initialY;
+            private float initialTouchX;
+            private float initialTouchY;
+            private boolean dragged;
+
+            @Override
+            public boolean onTouch(View view, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        initialX = layoutParams.x;
+                        initialY = layoutParams.y;
+                        initialTouchX = event.getRawX();
+                        initialTouchY = event.getRawY();
+                        dragged = false;
+                        return true;
+
+                    case MotionEvent.ACTION_MOVE:
+                        final float deltaX = event.getRawX() - initialTouchX;
+                        final float deltaY = event.getRawY() - initialTouchY;
+                        if (Math.abs(deltaX) > touchSlop || Math.abs(deltaY) > touchSlop) {
+                            dragged = true;
+                        }
+
+                        if (dragged) {
+                            layoutParams.x = initialX + Math.round(deltaX);
+                            layoutParams.y = initialY + Math.round(deltaY);
+                            refreshOverlayLayout(layoutParams);
+                        }
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                        if (!dragged) {
+                            bubble.setVisibility(View.GONE);
+                            panel.setVisibility(View.VISIBLE);
+                            refreshOverlayLayout(layoutParams);
+                            view.performClick();
+                        }
+                        return true;
+
+                    case MotionEvent.ACTION_CANCEL:
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        });
+    }
+
     private void installDragHandler(
             View dragHandle,
             WindowManager.LayoutParams layoutParams
@@ -217,10 +286,7 @@ public final class FloatingQaOverlayService extends Service {
                                 + Math.round(event.getRawX() - initialTouchX);
                         layoutParams.y = initialY
                                 + Math.round(event.getRawY() - initialTouchY);
-
-                        if (windowManager != null && overlayView != null) {
-                            windowManager.updateViewLayout(overlayView, layoutParams);
-                        }
+                        refreshOverlayLayout(layoutParams);
                         return true;
 
                     default:
@@ -228,6 +294,18 @@ public final class FloatingQaOverlayService extends Service {
                 }
             }
         });
+    }
+
+    private void refreshOverlayLayout(WindowManager.LayoutParams layoutParams) {
+        if (windowManager == null || overlayView == null) {
+            return;
+        }
+
+        try {
+            windowManager.updateViewLayout(overlayView, layoutParams);
+        } catch (RuntimeException ignored) {
+            // The overlay may be detaching while the service stops.
+        }
     }
 
     private void createNotificationChannel() {
@@ -259,7 +337,7 @@ public final class FloatingQaOverlayService extends Service {
         return new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("Network QA overlay active")
-                .setContentText("Process-local latency and packet-drop controls")
+                .setContentText("Tap the floating QA bubble to open controls")
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .build();
