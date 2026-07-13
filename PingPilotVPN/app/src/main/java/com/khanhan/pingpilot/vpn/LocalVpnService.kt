@@ -5,11 +5,13 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.khanhan.pingpilot.MainActivity
@@ -62,10 +64,14 @@ class LocalVpnService : VpnService() {
                     .setSession(getString(R.string.app_name))
                     .setMtu(1500)
                     .addAddress(DEMO_ADDRESS, 32)
-                    // 198.18.0.0/15 is reserved for benchmark/testing. Routing only this
-                    // range keeps ordinary Internet and game traffic on the real network.
+                    // This route is reserved for benchmarks/testing. Ordinary Internet
+                    // traffic stays on the device's original Wi-Fi or mobile network.
                     .addRoute(DEMO_ROUTE, DEMO_ROUTE_PREFIX)
                     .allowBypass()
+
+                // Explicit split tunneling: the game packages below never enter this
+                // VPN interface, even if more routes are added in a future build.
+                applyGameBypass(builder)
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     builder.setMetered(false)
@@ -81,6 +87,19 @@ class LocalVpnService : VpnService() {
                 tunnelInterface = null
                 VpnStatusStore.setError(throwable.message ?: "Không thể bật VPN.")
                 stopForegroundAndSelf()
+            }
+        }
+    }
+
+    private fun applyGameBypass(builder: Builder) {
+        GAME_BYPASS_PACKAGES.forEach { packageName ->
+            try {
+                builder.addDisallowedApplication(packageName)
+                Log.i(TAG, "VPN bypass enabled for $packageName")
+            } catch (_: PackageManager.NameNotFoundException) {
+                // The package is not installed on this device. This is expected when
+                // the user only has one Free Fire edition installed.
+                Log.d(TAG, "Bypass package not installed: $packageName")
             }
         }
     }
@@ -162,10 +181,16 @@ class LocalVpnService : VpnService() {
         const val ACTION_CONNECT = "com.khanhan.pingpilot.action.CONNECT"
         const val ACTION_DISCONNECT = "com.khanhan.pingpilot.action.DISCONNECT"
 
+        private const val TAG = "PingPilotVPN"
         private const val CHANNEL_ID = "ping_pilot_vpn"
         private const val NOTIFICATION_ID = 1001
         private const val DEMO_ADDRESS = "10.66.0.2"
         private const val DEMO_ROUTE = "198.18.0.0"
         private const val DEMO_ROUTE_PREFIX = 15
+
+        private val GAME_BYPASS_PACKAGES = listOf(
+            "com.dts.freefireth",
+            "com.dts.freefiremax"
+        )
     }
 }
